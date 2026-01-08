@@ -59,7 +59,7 @@ client.once('ready', async () => {
   await guild.commands.set([
     {
       name: 'race',
-      description: 'Gestion des courses Street Racer',
+      description: 'Gestion des courses NoxVelocity',
       options: [
         {
           name: 'result',
@@ -99,26 +99,44 @@ client.on('interactionCreate', async interaction => {
 
   // ===== WHITELIST =====
   if (interaction.isButton() && interaction.customId === 'open_whitelist') {
-    const modal = new ModalBuilder().setCustomId('whitelist_modal').setTitle('📝 Candidature NoxVelocity');
 
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('irl_name').setLabel('Prénom / Nom').setStyle(TextInputStyle.Short).setRequired(true)
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('pseudo').setLabel('Pseudo RP').setStyle(TextInputStyle.Short).setRequired(true)
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('age').setLabel('Âge RP').setStyle(TextInputStyle.Short).setRequired(true)
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder().setCustomId('background').setLabel('Background du personnage').setStyle(TextInputStyle.Paragraph).setRequired(true)
-      )
-      
-    );
+  const modal = new ModalBuilder()
+    .setCustomId('whitelist_modal')
+    .setTitle('📝 Candidature NoxVelocity');
 
-    return interaction.showModal(modal);
-  }
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('irl_name')
+        .setLabel('Prénom Nom')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('pseudo')
+        .setLabel('Pseudo')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('age')
+        .setLabel('Age')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('background')
+        .setLabel('Background du personnage')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    )
+  );
+
+  return interaction.showModal(modal);
+}
 
   if (interaction.isModalSubmit() && interaction.customId === 'whitelist_modal') {
     const guild = interaction.guild;
@@ -205,6 +223,45 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'resetleader
     return interaction.reply({ content: '❌ Tu n’es pas autorisé à utiliser cette commande.', ephemeral: true });
   }
 
+  // ===== SETUP REJOINDRE NOXVELOCITY =====
+if (interaction.isChatInputCommand() && interaction.commandName === 'setupwhitelist') {
+
+  const adminRole = interaction.guild.roles.cache.find(r => r.name === ADMIN_ROLE);
+  if (!adminRole || !interaction.member.roles.cache.has(adminRole.id)) {
+    return interaction.reply({ content: '❌ Réservé aux admins', ephemeral: true });
+  }
+
+  // Trouver le salon 📝-approchants
+  const targetChannel = interaction.guild.channels.cache.find(
+    c => c.name === '📝-approchants'
+  );
+
+  if (!targetChannel) {
+    return interaction.reply({ content: '❌ Salon "📝-approchants" introuvable.', ephemeral: true });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle('📥 Rejoindre la NoxVelocity')
+    .setDescription(
+      'Bienvenue sur **NoxVelocity** 🏎️\n\n' +
+      'Clique sur le bouton ci-dessous pour pouvoir rejoindre le projet.\n' +
+      'Un membre du projet traitera ta demande dans les plus brefs délais.'
+    )
+    .setColor(0xff6a00);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('open_whitelist')
+      .setLabel('Faire une demande')
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  await targetChannel.send({ embeds: [embed], components: [row] });
+
+  return interaction.reply({ content: '✅ Message envoyé dans 📝-approchants', ephemeral: true });
+}
+
+
   // Réinitialise les fichiers JSON
   saveJSON(LEADERBOARD_FILE, {});          // vide le classement
   saveJSON(LEADERBOARD_HISTORY_FILE, {});  // vide l’historique
@@ -236,7 +293,7 @@ if (interaction.isChatInputCommand() && interaction.commandName === 'resetleader
     const top3Ids = lastRace.slice(0,3).map(p=>p.id);
 
     const embed = new EmbedBuilder()
-      .setTitle('👑 Classement Street Racer')
+      .setTitle('👑 Classement courses')
       .setColor(0xff6a00)
       .setDescription(sorted.map(([id,pts],i)=>{
         const medal = top3Ids.includes(id) ? (i===0?'🥇':i===1?'🥈':'🥉') : '';
