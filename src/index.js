@@ -79,14 +79,10 @@ client.once('ready', async () => {
         { name:'media', description:'URLs des images/vidéos séparées par des virgules (optionnel)', type:3, required:false }
       ]
     },
-    {
+   {
   name: 'embed',
-  description: 'Publier un embed personnalisé',
-  options: [
-    { name:'titre', description:'Titre de l’embed', type:3, required:true },
-    { name:'texte', description:'Texte de l’embed', type:3, required:true },
-    { name:'couleur', description:'Couleur HEX ex: #FF6A00', type:3, required:false }
-  ]
+  description: 'Publier un embed personnalisé (via modal)'
+  // Plus besoin d’options, le modal fera le reste
 }
   ]);
 
@@ -175,6 +171,28 @@ client.on('interactionCreate', async interaction => {
 
     setTimeout(()=>channel.delete().catch(()=>{}),3000);
   }
+
+  if (interaction.isModalSubmit() && interaction.customId === 'embed_modal') {
+  const title = interaction.fields.getTextInputValue('embed_title');
+  const description = interaction.fields.getTextInputValue('embed_description');
+  let color = interaction.fields.getTextInputValue('embed_color') || '#FF6A00';
+  color = color.replace('#','');
+
+  if (!/^[0-9A-Fa-f]{6}$/.test(color)) color = 'FF6A00'; // Sécurité
+
+  const footer = interaction.fields.getTextInputValue('embed_footer');
+
+  const embed = new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(description)
+    .setColor(parseInt(color,16))
+    .setTimestamp();
+
+  if (footer) embed.setFooter({ text: footer });
+
+  await interaction.channel.send({ embeds: [embed] });
+  return interaction.reply({ content: '✅ Embed publié', ephemeral: true });
+}
 
   // ===== LEADERBOARD =====
   if(interaction.isChatInputCommand() && interaction.commandName==='race'){
@@ -277,31 +295,50 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content:'❤️ Like ajouté', ephemeral:true });
   }
   
-  // ===== EMBED COMMAND =====
+ // ===== EMBED COMMAND VIA MODAL =====
 if (interaction.isChatInputCommand() && interaction.commandName === 'embed') {
-
   const adminRole = interaction.guild.roles.cache.find(r => r.name === ADMIN_ROLE);
   if (!adminRole || !interaction.member.roles.cache.has(adminRole.id)) {
-    return interaction.reply({ content:'❌ Réservé aux admins', ephemeral:true });
+    return interaction.reply({ content: '❌ Réservé aux admins', ephemeral: true });
   }
 
-  const titre = interaction.options.getString('titre');
-  const texte = interaction.options.getString('texte');
-  let couleur = interaction.options.getString('couleur') || 'FF6A00';
-  couleur = couleur.replace('#','');
+  // Création du modal
+  const modal = new ModalBuilder()
+    .setCustomId('embed_modal')
+    .setTitle('Créer un Embed');
 
-  if (!/^[0-9A-Fa-f]{6}$/.test(couleur)) {
-    return interaction.reply({ content:'❌ Couleur HEX invalide', ephemeral:true });
-  }
+  const titleInput = new TextInputBuilder()
+    .setCustomId('embed_title')
+    .setLabel('Titre de l\'embed')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true);
 
-  const embed = new EmbedBuilder()
-    .setTitle(titre)
-    .setDescription(texte)
-    .setColor(parseInt(couleur,16))
-    .setTimestamp();
+  const descriptionInput = new TextInputBuilder()
+    .setCustomId('embed_description')
+    .setLabel('Description')
+    .setStyle(TextInputStyle.Paragraph) // Retours à la ligne autorisés
+    .setRequired(true);
 
-  await interaction.channel.send({ embeds:[embed] });
-  return interaction.reply({ content:'✅ Embed publié', ephemeral:true });
+  const colorInput = new TextInputBuilder()
+    .setCustomId('embed_color')
+    .setLabel('Couleur HEX (#FF6A00 par défaut)')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
+
+  const footerInput = new TextInputBuilder()
+    .setCustomId('embed_footer')
+    .setLabel('Footer (optionnel)')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(titleInput),
+    new ActionRowBuilder().addComponents(descriptionInput),
+    new ActionRowBuilder().addComponents(colorInput),
+    new ActionRowBuilder().addComponents(footerInput)
+  );
+
+  await interaction.showModal(modal);
 }
 });
 
