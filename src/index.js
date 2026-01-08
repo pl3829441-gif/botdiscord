@@ -64,9 +64,14 @@ client.once('ready', async () => {
         {
           name: 'result',
           description: 'Entrer le résultat d’une course',
-          type: 1, // Subcommand
+          type: 1,
           options: [
-            { name:'participants', description:'Mentionne les joueurs dans l’ordre', type:3, required:true }
+            {
+              name: 'participants',
+              description: 'Mentionne les joueurs dans l’ordre',
+              type: 3,
+              required: true
+            }
           ]
         }
       ]
@@ -75,8 +80,8 @@ client.once('ready', async () => {
       name: 'post',
       description: 'Poster sur le feed RP',
       options: [
-        { name:'contenu', description:'Texte du post', type:3, required:true },
-        { name:'media', description:'URLs des images/vidéos séparées par des virgules (optionnel)', type:3, required:false }
+        { name: 'contenu', description: 'Texte du post', type: 3, required: true },
+        { name: 'media', description: 'URLs des images/vidéos séparées par des virgules (optionnel)', type: 3, required: false }
       ]
     },
     {
@@ -86,10 +91,12 @@ client.once('ready', async () => {
     {
       name: 'resetleaderboard',
       description: 'Réinitialiser le classement (seulement pour le propriétaire du bot)'
-    },
+    }
+  ]);
 
-    ]);
-    
+  console.log('✅ Commandes slash mises à jour sur le serveur');
+});
+
     require('dotenv').config();
 const fs = require('fs');
 const {
@@ -521,11 +528,6 @@ app.listen(PORT, () => console.log(`Serveur web en écoute sur le port ${PORT}`)
 
 // ================= LOGIN =================
 client.login(process.env.TOKEN);
-
-  ]);
-
-  console.log('✅ Commandes slash mises à jour sur le serveur');
-});
 
 
 // ================= INTERACTIONS =================
