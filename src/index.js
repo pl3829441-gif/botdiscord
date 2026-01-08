@@ -87,6 +87,9 @@ client.once('ready', async () => {
       name: 'resetleaderboard',
       description: 'Réinitialiser le classement (seulement pour le propriétaire du bot)'
     },
+
+    ]);
+    
     require('dotenv').config();
 const fs = require('fs');
 const {
