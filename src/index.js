@@ -84,10 +84,13 @@ client.once('ready', async () => {
   description: 'Publier un embed personnalisé (via modal)'
   // Plus besoin d’options, le modal fera le reste
 }
-  ]);
 
   console.log('✅ Commandes slash mises à jour sur le serveur');
-});
+  {
+    name: 'resetleaderboard',
+    description: 'Réinitialiser le classement (seulement pour le propriétaire du bot)'
+  }
+]);
 
 // ================= INTERACTIONS =================
 
@@ -110,6 +113,7 @@ client.on('interactionCreate', async interaction => {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder().setCustomId('background').setLabel('Background du personnage').setStyle(TextInputStyle.Paragraph).setRequired(true)
       )
+      
     );
 
     return interaction.showModal(modal);
@@ -193,6 +197,20 @@ client.on('interactionCreate', async interaction => {
   await interaction.channel.send({ embeds: [embed] });
   return interaction.reply({ content: '✅ Embed publié', ephemeral: true });
 }
+
+if (interaction.isChatInputCommand() && interaction.commandName === 'resetleaderboard') {
+  // Vérifie que c’est toi qui utilises la commande
+  if (interaction.user.id !== OWNER_ID) {
+    return interaction.reply({ content: '❌ Tu n’es pas autorisé à utiliser cette commande.', ephemeral: true });
+  }
+
+  // Réinitialise les fichiers JSON
+  saveJSON(LEADERBOARD_FILE, {});          // vide le classement
+  saveJSON(LEADERBOARD_HISTORY_FILE, {});  // vide l’historique
+
+  return interaction.reply({ content: '✅ Classement et historique réinitialisés.', ephemeral: true });
+}
+
 
   // ===== LEADERBOARD =====
   if(interaction.isChatInputCommand() && interaction.commandName==='race'){
