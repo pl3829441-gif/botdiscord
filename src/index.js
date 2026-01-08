@@ -1,6 +1,5 @@
 require('dotenv').config();
 const fs = require('fs');
-const express = require('express'); // Pour Render
 const {
   Client,
   GatewayIntentBits,
@@ -25,6 +24,7 @@ const client = new Client({
 });
 
 // ================= CONFIG =================
+
 const OWNER_ID = '843136143491203072';
 const GUILD_ID = '1458505788816494713'; // Serveur pour test commandes
 
@@ -43,11 +43,13 @@ const POINTS_TABLE = [10, 8, 6, 4, 2];
 const MAX_LEADERBOARD = 10;
 
 // ================= UTILS =================
+
 function ensureFile(path) { if(!fs.existsSync(path)) fs.writeFileSync(path,'{}'); }
 function getJSON(path){ ensureFile(path); return JSON.parse(fs.readFileSync(path)); }
 function saveJSON(path,data){ fs.writeFileSync(path,JSON.stringify(data,null,2)); }
 
 // ================= READY =================
+
 client.once('ready', async () => {
   console.log(`✅ Bot connecté : ${client.user.tag}`);
 
@@ -76,13 +78,23 @@ client.once('ready', async () => {
         { name:'contenu', description:'Texte du post', type:3, required:true },
         { name:'media', description:'URLs des images/vidéos séparées par des virgules (optionnel)', type:3, required:false }
       ]
-    }
+    },
+    {
+  name: 'embed',
+  description: 'Publier un embed personnalisé',
+  options: [
+    { name:'titre', description:'Titre de l’embed', type:3, required:true },
+    { name:'texte', description:'Texte de l’embed', type:3, required:true },
+    { name:'couleur', description:'Couleur HEX ex: #FF6A00', type:3, required:false }
+  ]
+}
   ]);
 
   console.log('✅ Commandes slash mises à jour sur le serveur');
 });
 
 // ================= INTERACTIONS =================
+
 client.on('interactionCreate', async interaction => {
 
   // ===== WHITELIST =====
@@ -174,6 +186,7 @@ client.on('interactionCreate', async interaction => {
     const leaderboard = getJSON(LEADERBOARD_FILE);
     const history = getJSON(LEADERBOARD_HISTORY_FILE);
 
+    // Enregistrer la dernière course pour top3
     const lastRace = mentions.map((m,i)=>{ const id=m.replace(/\D/g,''); leaderboard[id]=(leaderboard[id]||0)+(POINTS_TABLE[i]??1); return {id, points:POINTS_TABLE[i]??1}; });
 
     history[Date.now()] = lastRace;
@@ -190,6 +203,7 @@ client.on('interactionCreate', async interaction => {
       .setColor(0xff6a00)
       .setDescription(sorted.map(([id,pts],i)=>{
         const medal = top3Ids.includes(id) ? (i===0?'🥇':i===1?'🥈':'🥉') : '';
+        const color = i===0?0xFFD700:i===1?0xC0C0C0:i===2?0xCD7F32:0xff6a00;
         return `${medal} **${i+1}. <@${id}> — ${pts} pts**`;
       }).join('\n'))
       .setFooter({ text:`Dernière course top3: ${lastRace.slice(0,3).map(p=>'🏎️ <@'+p.id+'>').join(' ')}` });
@@ -199,13 +213,13 @@ client.on('interactionCreate', async interaction => {
     return interaction.reply({ content:'✅ Leaderboard mis à jour', ephemeral:true });
   }
 
-  // ===== SOCIAL FEED =====
+  // ===== SOCIAL FEED INSTAGRAM STYLE =====
   if(interaction.isChatInputCommand() && interaction.commandName==='post'){
     if(interaction.user.id !== OWNER_ID) return interaction.reply({ content:'❌ Tu ne peux pas poster.', ephemeral:true });
 
     const content = interaction.options.getString('contenu');
-    const mediaInput = interaction.options.getString('media');
-    const mediaUrls = mediaInput ? mediaInput.split(',').map(m=>m.trim()).slice(0,4) : [];
+    const mediaInput = interaction.options.getString('media'); // URLs séparées par virgules
+    const mediaUrls = mediaInput ? mediaInput.split(',').map(m=>m.trim()).slice(0,4) : []; // max 4 médias
     const channel = interaction.guild.channels.cache.find(c=>c.name===FEED_CHANNEL);
     if(!channel) return interaction.reply({ content:'❌ Salon feed introuvable.', ephemeral:true });
 
@@ -218,9 +232,11 @@ client.on('interactionCreate', async interaction => {
         .setColor(0xff6a00)
         .setFooter({ text:`❤️ 0 likes` })
         .setTimestamp();
-      if(i===0) embed.setDescription(content);
+      if(i===0) embed.setDescription(content); // texte sur la première embed
       if(url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm')){
         embed.setDescription(`${i===0 ? content+'\n':''}🎬 [Vidéo](${url})`);
+      } else if(url.endsWith('.gif')){
+        embed.setImage(url);
       } else {
         embed.setImage(url);
       }
@@ -260,17 +276,34 @@ client.on('interactionCreate', async interaction => {
 
     return interaction.reply({ content:'❤️ Like ajouté', ephemeral:true });
   }
+  
+  // ===== EMBED COMMAND =====
+if (interaction.isChatInputCommand() && interaction.commandName === 'embed') {
+
+  const adminRole = interaction.guild.roles.cache.find(r => r.name === ADMIN_ROLE);
+  if (!adminRole || !interaction.member.roles.cache.has(adminRole.id)) {
+    return interaction.reply({ content:'❌ Réservé aux admins', ephemeral:true });
+  }
+
+  const titre = interaction.options.getString('titre');
+  const texte = interaction.options.getString('texte');
+  let couleur = interaction.options.getString('couleur') || 'FF6A00';
+  couleur = couleur.replace('#','');
+
+  if (!/^[0-9A-Fa-f]{6}$/.test(couleur)) {
+    return interaction.reply({ content:'❌ Couleur HEX invalide', ephemeral:true });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(titre)
+    .setDescription(texte)
+    .setColor(parseInt(couleur,16))
+    .setTimestamp();
+
+  await interaction.channel.send({ embeds:[embed] });
+  return interaction.reply({ content:'✅ Embed publié', ephemeral:true });
+}
 });
 
 // ================= LOGIN =================
 client.login(process.env.TOKEN);
-
-// ================= PORT RENDER =================
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.get('/', (req, res) => res.send('Bot en ligne ✅'));
-
-app.listen(port, () => {
-  console.log(`🌐 Serveur web démarré sur le port ${port}`);
-});
