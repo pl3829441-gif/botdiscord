@@ -54,7 +54,7 @@ client.once('ready', async () => {
   console.log(`✅ Bot connecté : ${client.user.tag}`);
 
   const guild = client.guilds.cache.get(GUILD_ID);
-  if(!guild) return console.log('❌ Serveur introuvable');
+  if (!guild) return console.log('❌ Serveur introuvable');
 
   await guild.commands.set([
     {
@@ -79,18 +79,19 @@ client.once('ready', async () => {
         { name:'media', description:'URLs des images/vidéos séparées par des virgules (optionnel)', type:3, required:false }
       ]
     },
-   {
-  name: 'embed',
-  description: 'Publier un embed personnalisé (via modal)'
-  // Plus besoin d’options, le modal fera le reste
-}
+    {
+      name: 'embed',
+      description: 'Publier un embed personnalisé (via modal)'
+    },
+    {
+      name: 'resetleaderboard',
+      description: 'Réinitialiser le classement (seulement pour le propriétaire du bot)'
+    }
+  ]);
 
   console.log('✅ Commandes slash mises à jour sur le serveur');
-  {
-    name: 'resetleaderboard',
-    description: 'Réinitialiser le classement (seulement pour le propriétaire du bot)'
-  }
-]);
+});
+
 
 // ================= INTERACTIONS =================
 
